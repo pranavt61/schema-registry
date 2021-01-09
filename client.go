@@ -445,6 +445,11 @@ type (
 		Schema string `json:"schema"`
 	}
 
+  jsonSchemaOnlyJSON struct {
+		Schema string `json:"schema"`
+    SchemaType string `json:"schemaType"`
+	}
+
 	idOnlyJSON struct {
 		ID int `json:"id"`
 	}
@@ -485,6 +490,42 @@ func (c *Client) RegisterNewSchema(subject string, avroSchema string) (int, erro
 
 	schema := schemaOnlyJSON{
 		Schema: avroSchema,
+	}
+
+	send, err := json.Marshal(schema)
+	if err != nil {
+		return 0, err
+	}
+
+	// # Register a new schema under a particular subject
+	// POST /subjects/(string: subject)/versions
+
+	path := fmt.Sprintf(subjectPath+"/versions", subject)
+	resp, err := c.do(http.MethodPost, path, contentTypeSchemaJSON, send)
+	if err != nil {
+		return 0, err
+	}
+
+	var res idOnlyJSON
+	err = c.readJSON(resp, &res)
+	return res.ID, err
+}
+
+// RegisterNewSchema registers a schema.
+// The returned identifier should be used to retrieve
+// this schema from the schemas resource and is different from
+// the schema’s version which is associated with that name.
+func (c *Client) RegisterNewJSONSchema(subject string, JSONSchema string) (int, error) {
+	if subject == "" {
+		return 0, errRequired("subject")
+	}
+	if JSONSchema == "" {
+		return 0, errRequired("avroSchema")
+	}
+
+	schema := jsonSchemaOnlyJSON{
+		Schema: JSONSchema,
+    SchemaType: "JSON",
 	}
 
 	send, err := json.Marshal(schema)
